@@ -15,7 +15,7 @@ module unpacker_tb;
 	);
 	
 	/*
-	initial vegin
+	initial begin
 		$dumpfile("unp_test.vcd");
 		$dumpvars(0, unpacker);
 	end // Dump
