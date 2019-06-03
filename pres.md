@@ -3,9 +3,9 @@
 % Instructor: Jose Yallouz
 ---
 theme:
-- Szeged
+- Pittsburgh
 colortheme:
-- beaver
+- dolphin
 mainfont: DejaVuSans.ttf
 mainfontoptions:
 - BoldFont=DejaVuSans-Bold.ttf
@@ -13,9 +13,51 @@ header-includes: |
   \usepackage{tikz}
 ---
 
+# Background
+
+Similar to IEEE float representation, the POSIT representation consists of several different segments.
+Unlike Float:
+
+- Posit have three fields, namely Regime/Exponent/Significand.
+- These fields can have variable length
+
+# Background - Posit number example
+
+An example of a POSIT number
+
+
+\begin{figure}[h]
+\includegraphics[width=0.80\textwidth,height=0.30\textheight]{./POSIT_nr_example.png}
+\end{figure}
+
+# Background - POSIT pros
+
+The POSIT representation allows
+
+- change number granularity - shift from large number with low accuracy
+    to tiny number with maximum precision
+
+- use a single representation for NaN ($\pm \infty$)
+
+- perfect reciprocal for powers of 2
+
+# Background - Posit numbers circle 
+
+\begin{figure}[h]
+\includegraphics[width=0.50\textwidth,height=0.70\textheight]{./POSIT_semi_circle.png}
+\caption{POSIT number representation}
+\end{figure}
+
+# Packer and unpacker modules
+
+As a result of such representation, the size of these three fields can change
+after ALU operations.
+
+To handle such changes we introduce the Packer and Unpacker modules.
+
 # Packer and unpacker modules - unpacker
 
-The unpacker diagram is used to transform the POSIT into three
+The unpacker module is used to transform the POSIT into three
 separate numbers that represent the regime, exponent and significand
 parts of the POSIT.
 
@@ -27,11 +69,15 @@ It implements the following:
 
 # Packer and unpacker modules - unpacker
 
-<!--add unpacker diagram here-->
+\begin{figure}[h]
+\includegraphics[width=0.9\textwidth,height=0.75\textheight]{./unpacker.eps}
+\caption{a diagram of POSIT multiplication flow}
+\end{figure}
 
 # Packer and unpacker modules - Packer
 
-<!--add description later-->
+The packer module does the opposite functionality. It takes three numbers representing
+the three segments, and creates a POSIT number out of them.
 
 # Multiplication
 
@@ -62,17 +108,16 @@ if needed.
 The exponent bits are summed, and their carry is added to the regime bits summation.
 
 The addition of the regime bits (with the exponent carry) can "overflow" (the resulting
-regime bits representation increases), we take care of this case when we pack the three
-fields together
+regime can take more bits than it had in the original numbers), we take care of this 
+case when we pack the three fields together.
 
 # Fraction part multiplication
 
-left to the dot is a hidden bit), and hence a multiplication of two fraction
-We acknowledge that the range of the fraction bits is [0,2) (while the 1 digit
-fields is in the range [0, 4).
+Similar to IEEE, the POSIT fraction (significand) field represents a number in
+the range of [1,2) but encodes only the fraction part (range [0,1)) . 
 
-To get a product that is larger than one, we add the "hidden 1" as the MSB
-before multiplying.
+To get a product that is larger than one, the Unpacker module adds the "hidden 1"
+as the MSB fraction before multiplying.
 
 # Handling fraction addition overflow
 
@@ -114,3 +159,23 @@ fraction overflow, but otherwise stay the same.
 
 All three fields are then passed to the packer module and converted to POSIT
 representation.
+
+# Reciprocal
+
+The reciprocal consists of making a 2's complement of POSIT bits. Further tests
+needed to check inaccuracy error when dealing with numbers that are not a multiply
+of 2.
+
+# Bibliography
+
+1. \small “The End of Error: Unum Computing”
+    \small by Dr. John L. Gustafson
+
+2. \small “Beating Floating Point at its Own Game: Posit Arithmetic”[^ref1]
+    \small by Dr. John L. Gustafson and Dr. Isaac Yonemoto
+    
+3. \small “Parameterized Posit Arithmetic Hardware Generator”[^ref2]
+    \small by Dr. John L. Gustafson et ali
+
+[^ref1]: http://www.johngustafson.net/pdfs/BeatingFloatingPoint.pdf
+[^ref2]: https://posithub.org/docs/iccd_submission_v1.pdf
