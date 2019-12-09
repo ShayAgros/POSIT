@@ -1,6 +1,15 @@
 
 # POSIT Project in BSc
 
+## Code compilation
+
+To compile a verilog file use the command
+`iverilog -o [name of the output file] [.v files]`
+
+## Running simulation
+
+The vvp simulation programs take 'vvp' files and runs them:
+`vvp [vvp file]`
 
 ## Presentation compilation
 
