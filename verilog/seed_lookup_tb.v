@@ -4,9 +4,11 @@ module unpacker_tb;
 	reg [15:0] data;
 
 	wire signed [15:0] seed;
+	wire [15:0] shifted_data;
 
 	seed_lookup #(16,3) dut (
 		.data	(data),
+		.shifted_data(shifted_data),
 		.seed	(seed)
 	);
 
@@ -36,8 +38,8 @@ module unpacker_tb;
 	end // Vars
 	
 	initial begin // monitor
-		$monitor("Time = %3d\n\tData = %16b   Seed = %4d\n",
-							$time, data, seed);
+		$monitor("Time = %3d\n\tData = %16b   Seed = %4d   Shifted_data = %16b\n",
+							$time, data, seed, shifted_data);
 	end // monitor
 
 endmodule

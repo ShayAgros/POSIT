@@ -1,18 +1,18 @@
 module seed_lookup(
 	data,
+	shifted_data,
 	seed, 
 	);
 
 	// PARAMETERS
 	parameter BITS = 32;
-	parameter ES = 3;
 
 	//INPUT
-	
 	input logic [BITS-1:0] data;
 
 	// OUTPUT
 	output logic signed [BITS-1:0] seed;
+	output wire [BITS - 1:0] shifted_data;
 
 	integer xor_result;
 	integer include_bit_in_sum;
@@ -20,10 +20,16 @@ module seed_lookup(
 	integer ii=0;
 
 	// Vars for the seed
-	reg seed_bit;
-	reg signed [BITS-1:0] leading_zero_vector;
-	reg signed [BITS-1:0] temp_seed;
-	reg signed [BITS-1:0] negative_seed;
+	logic seed_bit;
+	logic signed [BITS-1:0] leading_zero_vector;
+	logic signed [BITS-1:0] temp_seed;
+	logic signed [BITS-1:0] negative_seed;
+
+	left_shifter #(BITS) ls (
+		.data	(data),
+		.bitmask (leading_zero_vector),
+		.shifted_data (shifted_data)
+	);
 
 	always @*
 	begin
@@ -80,6 +86,7 @@ module seed_lookup(
 		else
 			seed = negative_seed;
 
+		//shifted_data = leading_zero_vector;
 	end // always
 
 endmodule

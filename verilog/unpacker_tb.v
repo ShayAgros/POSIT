@@ -4,7 +4,7 @@ module unpacker_tb;
 	reg [15:0] data;
 	// OUTPUT
 	wire signed [15:0] seed;
-	wire [2:0] exp;
+	wire signed [2:0] exp;
 	wire [15:0] frac;
 	
 	unpacker #(16,3) dut (
@@ -46,8 +46,8 @@ module unpacker_tb;
 	end // Vars
 	
 	initial begin // monitor
-		$monitor("Time = %3d\n\tData = %16b   Seed = %3d   Exp = %3b   Frac = %16b\n",
-							$time, data, seed, exp, frac);
+		$monitor("Time = %3d\n\tData = %16b   Seed = %3d   Exp = %3b (%d) Frac = %16b(%d)\n",
+							$time, data, seed, exp, exp, frac, frac);
 	end // monitor
 	
 endmodule
