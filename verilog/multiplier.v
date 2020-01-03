@@ -1,25 +1,24 @@
-module multiplier(
+module multiplier (
 	x,
 	y,
 	posit
 	);
 
-				// TODO: Add flag for infinite and zero
 	// PARAMETERS
 	parameter BITS = 32;
 	parameter ES = 3;
 
 	// INPUT
-	input wire [BITS-1:0] x;
-	input wire [BITS-1:0] y; 
+	input logic [BITS-1:0] x;
+	input logic [BITS-1:0] y; 
 	
 	// OUTPUT
 	output wire [BITS-1:0] posit;
 
 	// local vars
-	reg [BITS-1:0] temp_x;
-	reg [BITS-1:0] temp_y;
-	
+	logic [BITS-1:0] positive_x;
+	logic [BITS-1:0] positive_y;
+
 	wire [BITS-1:0] seed_x;
 	wire [BITS-1:0] seed_y;
 	
@@ -30,25 +29,34 @@ module multiplier(
 	wire [BITS-1:0] frac_y;
 	
 	// A single bit should be added for overflow checking
-	reg signed [BITS:0] temp_seed;
-	reg [ES:0] temp_exp;
+	logic signed [BITS:0] temp_seed;
+	logic [ES:0] temp_exp;
 
-	// we add the hidden bits to each fraction, so each fraction has BITS + 1 bits,
-	// so the multiplier has 2*(BITS + 1) bits
-	reg [2*BITS + 1:0] temp_frac;
-	
+	// Flags we use
+	logic flag_infinity;
+	logic flag_zero; 
+	logic flag_overflow_frac;
+	logic flag_overflow_exp;
+	logic flag_overflow_seed;
+
+
+	// We add the hidden bits to each fraction, so each fraction has BITS + 1 bits,
+	// so the fraction needs 2*(BITS + 1) bits
+	logic [2*BITS + 1:0] temp_frac;
+	logic [BITS-1:0] final_posit;
+
 	wire [BITS-1:0] temp_pos;
-	wire sign_bit;
+	logic sign_bit;
 
 	unpacker #(BITS, ES) unpack_x ( 	
-		.data 	(temp_x),
+		.data 	(positive_x),
 		.seed	(seed_x),
 		.exp 	(exp_x),
 		.frac	(frac_x)
 	);
 
 	unpacker #(BITS, ES) unpack_y (
-		.data 	(temp_y),
+		.data 	(positive_y),
 		.seed	(seed_y),
 		.exp 	(exp_y),
 		.frac	(frac_y)
@@ -61,59 +69,89 @@ module multiplier(
 		.posit 	(temp_pos)
 	);
 	
-	assign sign_bit = x[BITS - 1] ^ y[BITS - 1]; 
 
-	always @*  // BEFORE UNPACKING
+	always @* // BEFORE UNPACKING
 	begin
+		flag_zero = 0;
+		flag_infinity = 0;
+	
+		sign_bit = x[BITS - 1] ^ y[BITS - 1];
+
 		// if x or y are negative we need to convert to 2's complement
-		temp_x = (x[BITS - 1]) ? -x : x;
-		temp_y = (y[BITS - 1]) ? -y : y;
+		positive_x = (x[BITS - 1]) ? -x : x;
+		positive_y = (y[BITS - 1]) ? -y : y;
+
+		$display("positive_x is %16b   positive_y is %16b\n", positive_x, positive_y);
+
+		// Find infinite and zero flags
+		if (x[BITS-2:0] == 0)
+		begin
+			flag_zero = flag_zero | ~x[BITS-1];
+			flag_infinity = flag_infinity | x[BITS-1];		
+		end
+		if (y[BITS-2:0] == 0)
+		begin
+			flag_zero = flag_zero | ~y[BITS-1];
+			flag_infinity = flag_infinity | y[BITS-1];		
+		end
+
 	end // always
 
 	always @* // AFTER UNPACKING
 	begin
-		temp_frac = 0;
-		temp_exp = 0;
-		temp_seed = 0;
+		flag_overflow_frac = 0;
+		flag_overflow_exp = 0;
+		flag_overflow_seed = 0;
 
 		// CALCULATE THE FRACTION
 		
 		// add hidden bit and multiply
-		temp_frac = {1'b1, frac_x} * {1'b1,frac_y};
+		temp_frac = {1'b1, frac_x << 3} * {1'b1,frac_y << 3};
 
-		$display("frac_x is %16b   frac_y is %16b\n", frac_x, frac_y);
-		// check for overflow
-		if (temp_frac[2*BITS + 1] == 1)
-		begin
-			// send overflow to exp
-			temp_exp = temp_exp + 1;
-
-			// normalize the fraction
-			temp_frac[2*BITS + 1] = 0;
-			temp_frac = temp_frac >> 1;
-		end // if
+				
+		$display("frac_x is %16b   frac_y is %16b   temp_frac is %16b\n", frac_x << 3, frac_y << 3, temp_frac);
 		
-		// if fraction is 0, no point in continuing.
+
+		// If need be, shift the fraction to fix the overflow
+		flag_overflow_frac = temp_frac[2*BITS + 1];
+		temp_frac[2*BITS + 1] = 0;
 
 		// CALCULATE THE EXPONENT
 		
-		temp_exp = temp_exp + exp_x + exp_y;
+		temp_exp = exp_x + exp_y + flag_overflow_frac;
 
-		// check for overflow
-		if (temp_exp[BITS] == 1)
-		begin
-			temp_seed = temp_seed + 1;
-			temp_exp[BITS] = 0;
-		end // if
-		
+		$display("exp_x is %3b   exp_y is %3b   temp_exp is %4b\n", exp_x, exp_y, temp_exp);
+
+		// Check for overflow
+		flag_overflow_exp = temp_exp[BITS];
+		temp_exp[BITS] = 0;
+
 		// CALCULATE THE SEED
-		// TODO: how to handle infinite and zero flag?
+		temp_seed = seed_x + seed_y + flag_overflow_exp;
+		flag_overflow_seed = temp_seed[ES];
 
-		temp_seed = temp_seed + seed_x + seed_y;
-
+		/*
 		$display("\ntemp_seed is %d   temp_exp is %3b   temp_frac is %16b\n", temp_seed, temp_exp, temp_frac);		
+		*/
 	end // always
 
-	assign posit = (sign_bit) ? -temp_pos : temp_pos;
+	always @* // AFTER PACKING
+		// Now we check zero/infinity flags
+	begin
+		if (flag_zero == 1 || flag_infinity == 1 || flag_overflow_seed == 1)
+		begin
+			final_posit = 0;
+			if (flag_zero != 1)
+				final_posit[BITS-1] = 1;
+		end // if
+		else
+			final_posit = (sign_bit) ? -temp_pos : temp_pos;
+
+		$display("final posit is %16b\n", final_posit);
+
+	end // always
+
+	assign posit = final_posit;
+
 
 endmodule // multiplier
