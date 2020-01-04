@@ -66,14 +66,14 @@ module seed_lookup(
 		/* add the value of include_bit_in_sum until reaching first flipped */
 
 		/*
-		 * If include_bit_in_sum = 1 then we always add the first bit regardless of
-		 * leading_zero_vector[BITS-2] value. In case seed_bit == 1 we substruct 1
-		 * from the result. We want to avoid this substructing, and therefore we add
-		 * the not of the seed_bit instead of always 1
+		 * if 'bit 30' == 1, the absolute value of the resulting
+		 * number is smaller by 1 than the resulting number in case
+		 * 'bit 30' == 0. We avoid adding the first bit for 'bit 30' == 1
+		 * to avoid substruction
 		 */
-		temp_seed = temp_seed + (include_bit_in_sum & !seed_bit);
-		include_bit_in_sum = include_bit_in_sum & !leading_zero_vector[BITS - 2];
-		for (ii=3; ii < BITS; ii=ii+1)
+		temp_seed = temp_seed + !seed_bit;
+		include_bit_in_sum = include_bit_in_sum & !leading_zero_vector[BITS - 3];
+		for (ii=4; ii < BITS; ii=ii+1)
 		begin
 			temp_seed = temp_seed + include_bit_in_sum;
 			include_bit_in_sum = include_bit_in_sum & !leading_zero_vector[BITS - ii];
@@ -82,9 +82,9 @@ module seed_lookup(
 		negative_seed = -temp_seed;
 
 		if (seed_bit == 0)
-			seed = temp_seed;
-		else
 			seed = negative_seed;
+		else
+			seed = temp_seed;
 
 		//shifted_data = leading_zero_vector;
 	end // always
