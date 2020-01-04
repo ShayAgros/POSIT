@@ -1,7 +1,7 @@
 `timescale 1 ns / 1 ps
 module multiplier_tb;
 
-	// INPUT 
+	// INPUT
 	reg [15:0] x;
 	reg [15:0] y;
 
@@ -18,9 +18,9 @@ module multiplier_tb;
 /*
 		x = 0;
 		y = 0;
-		
+
 		// Multiply by 0
-		#5 // Time = 5; 
+		#5 // Time = 5;
 		x =   0;
 		y =   16'b0110101011010101;
 
@@ -29,7 +29,7 @@ module multiplier_tb;
 		y =   0;
 
 		// Multiply by infinity
-	
+
 		#5 // Time = 15;
 		x =   16'b1000000000000000;
 		y =   16'b1000000000000000;
@@ -37,7 +37,7 @@ module multiplier_tb;
 		#5 // Time = 20;
 		x =   16'b1010110100010101;
 		y =   16'b1000000000000000;
-	
+
 		#5 // Time = 25;
 		x =   16'b1000000000000000;
 		y =   16'b1010110100010101;

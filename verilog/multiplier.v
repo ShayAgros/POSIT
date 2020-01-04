@@ -10,8 +10,8 @@ module multiplier (
 
 	// INPUT
 	input logic [BITS-1:0] x;
-	input logic [BITS-1:0] y; 
-	
+	input logic [BITS-1:0] y;
+
 	// OUTPUT
 	output wire [BITS-1:0] posit;
 
@@ -21,20 +21,20 @@ module multiplier (
 
 	wire [BITS-1:0] seed_x;
 	wire [BITS-1:0] seed_y;
-	
+
 	wire [ES-1:0] exp_x;
 	wire [ES-1:0] exp_y;
 
 	wire [BITS-1:0] frac_x;
 	wire [BITS-1:0] frac_y;
-	
+
 	// A single bit should be added for overflow checking
 	logic signed [BITS:0] temp_seed;
 	logic [ES:0] temp_exp;
 
 	// Flags we use
 	logic flag_infinity;
-	logic flag_zero; 
+	logic flag_zero;
 	logic flag_overflow_frac;
 	logic flag_overflow_exp;
 	logic flag_overflow_seed;
@@ -48,7 +48,7 @@ module multiplier (
 	wire [BITS-1:0] temp_pos;
 	logic sign_bit;
 
-	unpacker #(BITS, ES) unpack_x ( 	
+	unpacker #(BITS, ES) unpack_x (
 		.data 	(positive_x),
 		.seed	(seed_x),
 		.exp 	(exp_x),
@@ -68,13 +68,13 @@ module multiplier (
 		.frac	(temp_frac[2*BITS-1:BITS]),
 		.posit 	(temp_pos)
 	);
-	
+
 
 	always @* // BEFORE UNPACKING
 	begin
 		flag_zero = 0;
 		flag_infinity = 0;
-	
+
 		sign_bit = x[BITS - 1] ^ y[BITS - 1];
 
 		// if x or y are negative we need to convert to 2's complement
@@ -87,12 +87,12 @@ module multiplier (
 		if (x[BITS-2:0] == 0)
 		begin
 			flag_zero = flag_zero | ~x[BITS-1];
-			flag_infinity = flag_infinity | x[BITS-1];		
+			flag_infinity = flag_infinity | x[BITS-1];
 		end
 		if (y[BITS-2:0] == 0)
 		begin
 			flag_zero = flag_zero | ~y[BITS-1];
-			flag_infinity = flag_infinity | y[BITS-1];		
+			flag_infinity = flag_infinity | y[BITS-1];
 		end
 
 	end // always
@@ -104,20 +104,20 @@ module multiplier (
 		flag_overflow_seed = 0;
 
 		// CALCULATE THE FRACTION
-		
+
 		// add hidden bit and multiply
 		temp_frac = {1'b1, frac_x << 3} * {1'b1,frac_y << 3};
 
-				
+
 		$display("frac_x is %16b   frac_y is %16b   temp_frac is %16b\n", frac_x << 3, frac_y << 3, temp_frac);
-		
+
 
 		// If need be, shift the fraction to fix the overflow
 		flag_overflow_frac = temp_frac[2*BITS + 1];
 		temp_frac[2*BITS + 1] = 0;
 
 		// CALCULATE THE EXPONENT
-		
+
 		temp_exp = exp_x + exp_y + flag_overflow_frac;
 
 		$display("exp_x is %3b   exp_y is %3b   temp_exp is %4b\n", exp_x, exp_y, temp_exp);
@@ -131,7 +131,7 @@ module multiplier (
 		flag_overflow_seed = temp_seed[ES];
 
 		/*
-		$display("\ntemp_seed is %d   temp_exp is %3b   temp_frac is %16b\n", temp_seed, temp_exp, temp_frac);		
+		$display("\ntemp_seed is %d   temp_exp is %3b   temp_frac is %16b\n", temp_seed, temp_exp, temp_frac);
 		*/
 	end // always
 
