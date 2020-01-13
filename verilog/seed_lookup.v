@@ -71,7 +71,7 @@ module seed_lookup(
 		 * 'bit 30' == 0. We avoid adding the first bit for 'bit 30' == 1
 		 * to avoid substruction
 		 */
-		temp_seed = temp_seed + !seed_bit;
+		temp_seed = temp_seed + (!seed_bit & include_bit_in_sum);
 		include_bit_in_sum = include_bit_in_sum & !leading_zero_vector[BITS - 3];
 		for (ii=4; ii < BITS; ii=ii+1)
 		begin
