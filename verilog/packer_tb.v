@@ -2,14 +2,14 @@
 module packer_tb;
 		
 	// INPUT
-	reg signed [15:0] seed;
+	reg signed [31:0] seed;
 	reg [2:0] exp;
-	reg [15:0] frac;
+	reg [31:0] frac;
 
 	// OUTPUT
-	wire [15:0] posit;
+	wire [31:0] posit;
 
-	packer #(16,3) dut (
+	packer #(32,3) dut (
 		.posit 	(posit),
 		.seed 	(seed),
 		.exp 	(exp),
@@ -25,61 +25,61 @@ module packer_tb;
 
 	initial begin // tb		
 		seed =   0;
-		exp  =   0;
-		frac =   0;
+		exp  =   3;
+		frac =   20;
 
 		// Seed takes all data
 
 		#5  // Time = 5
-		seed =  14;
+		seed =  -3;
 		exp  =   7;
 		frac =   4;
 
 
 		#5 // Time = 10
-		seed = -15;
+		seed =   5;
 		exp  =   7;
 		frac =   4;
 
-		// Not enough room for exp
+		//// Not enough room for exp
 
-		#5 // Time = 15
-		seed =  -14;
-		exp  =    7;
-		frac =    0;
+		//#5 // Time = 15
+		//seed =  -29;
+		//exp  =    7;
+		//frac =    0;
 	
-		#5 // Time = 20
-		seed = 	 13;
-		exp  =    0;
-		frac =   -1;
+		//#5 // Time = 20
+		//seed = 	 13;
+		//exp  =    0;
+		//frac =   -1;
 
 
-		#5 // Time = 25
-		seed = 	 11;
-		exp  =    0;
-		frac =   -1;
+		//#5 // Time = 25
+		//seed = 	 11;
+		//exp  =    0;
+		//frac =   -1;
 
-		// Now fill the fraction
+		//// Now fill the fraction
 
-		#5 // Time = 30
-		seed =    9;
-		exp  =    0;
-		frac =   -1;
+		//#5 // Time = 30
+		//seed =    9;
+		//exp  =    0;
+		//frac =   -1;
 		
-		#5 // Time = 35
-		seed =   -5;
-		exp  =    7;
-		frac =    (16'b101 << 13);
+		//#5 // Time = 35
+		//seed =   -5;
+		//exp  =    7;
+		//frac =    (16'b101 << 13);
 		
-		#5 // Time = 40
-		seed =   -5;
-		exp  =    5;
-		frac =   (16'b0010101 << 9);
+		//#5 // Time = 40
+		//seed =   -5;
+		//exp  =    5;
+		//frac =   (16'b0010101 << 9);
 
 	end // tb
 
 	initial begin // monitor
-		$monitor("Time = %3d\n\tSeed = %3d   Exp = %3b   Frac = %16b  Posit = %16b\n",
+		$monitor("Time = %3d\n\tSeed = %3d   Exp = %3b   Frac = %32b  Posit = %32b\n",
 					$time, seed, exp, frac, posit);
 	end // monitor
 
