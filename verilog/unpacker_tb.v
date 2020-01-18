@@ -46,8 +46,8 @@ module unpacker_tb;
 	end // Vars
 	
 	initial begin // monitor
-		$monitor("Time = %3d\n\tData = %16b   Seed = %3d   Exp = %3b (%d) Frac = %16b(%d)\n",
-							$time, data, seed, exp, exp, frac, frac);
+		$monitor("Time = %3d\n\tData = %16b   Seed = %3d   Exp = %3b Frac = %16b\n",
+							$time, data, seed, exp, frac);
 	end // monitor
 	
 endmodule

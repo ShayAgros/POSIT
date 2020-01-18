@@ -15,7 +15,7 @@ module multiplier (
 	// OUTPUT
 	output wire [BITS-1:0] posit;
 
-	// local vars
+	// LOCAL VARS
 	logic [BITS-1:0] positive_x;
 	logic [BITS-1:0] positive_y;
 
@@ -48,6 +48,7 @@ module multiplier (
 	wire [BITS-1:0] temp_pos;
 	logic sign_bit;
 
+	// SUB-MODULES
 	unpacker #(BITS, ES) unpack_x (
 		.data 	(positive_x),
 		.seed	(seed_x),
@@ -65,7 +66,7 @@ module multiplier (
 	packer #(BITS, ES) pack (
 		.seed	(temp_seed[BITS-1:0]),
 		.exp	(temp_exp[ES-1:0]),
-		.frac	(temp_frac[2*BITS-1:BITS]),
+		.frac	(temp_frac[2*BITS-2:BITS-1]),
 		.posit 	(temp_pos)
 	);
 
@@ -81,7 +82,7 @@ module multiplier (
 		positive_x = (x[BITS - 1]) ? -x : x;
 		positive_y = (y[BITS - 1]) ? -y : y;
 
-		$display("positive_x is %16b   positive_y is %16b\n", positive_x, positive_y);
+		//$display("positive_x is %16b   positive_y is %16b\n", positive_x, positive_y);
 
 		// Find infinite and zero flags
 		if (x[BITS-2:0] == 0)
@@ -106,10 +107,10 @@ module multiplier (
 		// CALCULATE THE FRACTION
 
 		// add hidden bit and multiply
-		temp_frac = {1'b1, frac_x << 3} * {1'b1,frac_y << 3};
+		temp_frac = {1'b1, frac_x} * {1'b1,frac_y};
 
 
-		$display("frac_x is %16b   frac_y is %16b   temp_frac is %16b\n", frac_x << 3, frac_y << 3, temp_frac);
+		//$display("frac_x is %16b   frac_y is %16b   temp_frac is %16b\n", frac_x, frac_y, temp_frac);
 
 
 		// If need be, shift the fraction to fix the overflow
@@ -120,19 +121,20 @@ module multiplier (
 
 		temp_exp = exp_x + exp_y + flag_overflow_frac;
 
-		$display("exp_x is %3b   exp_y is %3b   temp_exp is %4b\n", exp_x, exp_y, temp_exp);
+		// $display("exp_x is %3b   exp_y is %3b   temp_exp is %4b\n", exp_x, exp_y, temp_exp);
 
 		// Check for overflow
-		flag_overflow_exp = temp_exp[BITS];
-		temp_exp[BITS] = 0;
+		flag_overflow_exp = temp_exp[ES];
+		temp_exp[ES] = 0;
 
 		// CALCULATE THE SEED
+
 		temp_seed = seed_x + seed_y + flag_overflow_exp;
 		flag_overflow_seed = temp_seed[ES];
-
-		/*
-		$display("\ntemp_seed is %d   temp_exp is %3b   temp_frac is %16b\n", temp_seed, temp_exp, temp_frac);
-		*/
+		//$display("seed_x is %3b   seed_y is %3b   temp_seed is %4b\n", seed_x, seed_y, temp_seed);
+		
+		//$display("\ntemp_seed is %d   temp_exp is %3b   temp_frac is %16b\n", temp_seed, temp_exp, temp_frac);
+		
 	end // always
 
 	always @* // AFTER PACKING
@@ -147,7 +149,7 @@ module multiplier (
 		else
 			final_posit = (sign_bit) ? -temp_pos : temp_pos;
 
-		$display("final posit is %16b\n", final_posit);
+		//$display("final posit is %16b\n", final_posit);
 
 	end // always
 
