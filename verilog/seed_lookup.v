@@ -1,7 +1,7 @@
 module seed_lookup(
 	data,
 	shifted_data,
-	seed, 
+	seed,
 	);
 
 	// PARAMETERS
@@ -56,27 +56,29 @@ module seed_lookup(
 		* we need to check whether all bits are zero, if so
 		* we don't want to increase 'temp_seed' which counts
 		* how many bits are zero before the first 1
+		* In case we have a sequence of 1's, the seed is counted
+		* no matter what, even if no zero ends it
 		*/
-		include_bit_in_sum = 0;
-		for (ii=2; ii < BITS; ii=ii+1)
+		include_bit_in_sum = seed_bit;
+		for (ii=BITS - 2; ii >= 0; ii=ii-1)
 		begin
-			include_bit_in_sum = include_bit_in_sum | leading_zero_vector[BITS - ii];
+			include_bit_in_sum = include_bit_in_sum | leading_zero_vector[ii];
 		end
 
 		/* add the value of include_bit_in_sum until reaching first flipped */
 
 		/*
 		 * if 'bit 30' == 1, the absolute value of the resulting
-		 * number is smaller by 1 than the resulting number in case
+		 * number is smaller by 1 than the resulting number when
 		 * 'bit 30' == 0. We avoid adding the first bit for 'bit 30' == 1
 		 * to avoid substruction
 		 */
 		temp_seed = temp_seed + (!seed_bit & include_bit_in_sum);
-		include_bit_in_sum = include_bit_in_sum & !leading_zero_vector[BITS - 3];
-		for (ii=4; ii < BITS; ii=ii+1)
+		//include_bit_in_sum = include_bit_in_sum & !leading_zero_vector[BITS - 3];
+		for (ii=BITS - 3; ii >= 0; ii=ii - 1)
 		begin
+			include_bit_in_sum = include_bit_in_sum & !leading_zero_vector[ii];
 			temp_seed = temp_seed + include_bit_in_sum;
-			include_bit_in_sum = include_bit_in_sum & !leading_zero_vector[BITS - ii];
 		end
 
 		negative_seed = -temp_seed;
