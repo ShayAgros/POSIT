@@ -29,6 +29,8 @@ module packer(
 	logic [BITS-1:0] seed_seq;
 	logic [BITS-1:0] seed_sign_bit;
 	logic [BITS-1:0] temp_posit;
+	logic [BITS-1:0] shifter_bitmask;
+	logic [BITS-1:0] zero_vector; // represent the number 10000000 which is zero in POSIT
 
 	integer i;
 	integer xor_result;
@@ -43,8 +45,8 @@ module packer(
 	* seed bits */
 	left_shifter #(BITS) exp_shifter (
 		// insert the data "backwards"
-		.data({reversed_frac[BITS-1:ES], reversed_exp}),
-		.bitmask(temp_seed_seq),
+		.data({reversed_frac[BITS-1-ES:0], reversed_exp}),
+		.bitmask(shifter_bitmask),
 		.shifted_data(reverse_shifted_exp_frac[BITS-1:0])
 	);
 
@@ -73,7 +75,12 @@ module packer(
 		absolute_seed = absolute_seed + seed_sign_bit;
 	end
 
-	always @(shifted_exp_frac) /* Change seed sequence to running 1's if seed > 0*/
+	always @(temp_seed_seq) /* The seed sequence is calculated and not exp and frac should shift */
+	begin
+		shifter_bitmask = temp_seed_seq;
+	end /* Shift exp and frac */
+
+	always @(shifter_bitmask, shifted_exp_frac) /* Change seed sequence to running 1's if seed > 0*/
 	begin
 		/* switch sequence digits (if seed > 0) */
 		// !temp_seed_seq[BITS-1] is needed to avoid setting the
@@ -97,8 +104,16 @@ module packer(
 		else
 			temp_posit = temp_posit;
 
-		//$display("decoded seed = %32b, reversed_exp_frac = %32b , input_exp_frac = %32b", temp_seed_seq, reverse_shifted_exp_frac, {reversed_frac[BITS-1:ES], reversed_exp} );
+		//$display("shifter_bitmask seed = %32b, reversed_exp_frac = %32b , input_exp_frac = %32b", shifter_bitmask, reverse_shifted_exp_frac, {reversed_frac[BITS-1-ES:0], reversed_exp} );
 	end // always (change seed sequence)
+
+	always @(temp_posit)
+	begin
+		zero_vector = 0;
+		zero_vector[BITS-1] = 1;
+		if (temp_posit == zero_vector)
+			temp_posit = 0;
+	end
 
 	// add zero sign bit
 	assign posit = {1'b0, temp_posit[BITS-1:1]};
