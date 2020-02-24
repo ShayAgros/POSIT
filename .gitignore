@@ -1,2 +1,8 @@
 *.pdf
 *.vvp
+*.aux
+*.dvi
+*.fdb_latexmk
+*.fls
+*.log
+final_report/.auctex-auto
