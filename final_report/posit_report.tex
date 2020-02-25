@@ -194,14 +194,61 @@ of high accuracy (the size of the fraction field is implied by the regime part).
 
 \subsection{exponent and fraction fields}\label{sec:expon-fract-fields}
 
+The \textit{exponent} field width, denoted as \textit{es}, is fixed and determined at
+implementation. The field's starts after the first flipped bit that marks the
+\textit{regime} field's end (see \autoref{sec:regime-value}). If there are less
+than \textit{es} bits left after the \textit{regime} field, the
+\textit{exponent} field is right-padded with zeroes.
+
+
+\subsubsection{fraction field}\label{sec:fraction-field}
+The \textit{fraction} part of the POSIT starts after the \textit{exponent} field
+(see \autoref{fig:posit_format}) and its width depends on the number of bits
+occupied by the \textit{sign}, \textit{regime} and \textit{exponent}
+parts(\Ref{sec:regime-value}).
+
+\paragraph{}
+Unlike the IEEE 754 format, the POSIT format assumes that \textit{fraction} field only
+describes the fractional part of a number $1\leq n < 2 $. For example, the
+decimal representation of the \textit{fraction} field $b_{1},b_{2},\dots,b_{n}$
+is:
+\begin{align*}
+ 1 + \sum_{i=1}^{n}b_{i}\cdot 2^{-i}
+\end{align*}
+
+Combining the \textit{sign}, \textit{regime} and \textit{exponent} parts the
+decimal representation of a POSIT vector is
+
+\begin{align*}
+{(-1)}^{sign} \cdot ({useed}^{regime}) \cdot {2}^{exponent} \cdot 1.fraction
+\end{align*}
+
+\autoref{fig:diff_posit_vals} shows different POSIT vectors and their decimal
+value. As the figure shows, in case the fraction part is absent, it is assumed
+to be zero (i.e. its decimal representation is $1 + 0 = 1$)
+
+\begin{figure}[h]
+  \centering
+  \includegraphics[height=0.25\paperheight]{posit_values}
+  \caption{5-bit POSIT vectors with es = 2, useed = $2^{2^{es}} = 16$ and their
+    decimal value}
+  \label{fig:diff_posit_vals}
+\end{figure}
+
 \subsection{POSIT speciel values}\label{sec:posit-speciel-values}
 
+POSIT format does not differentiate between $\pm\infty$ and represents them both
+by setting the \textit{sign} bit and clearing the rest of the vector (as can be
+seen in \autoref{fig:diff_posit_vals}). \\
+Zero representation is a vector with all its bits cleared.
 
-
+\paragraph{}
+Unlike the IEEE 754 format, POSIT doesn't have a representation of NaN. In order
+to signal that a computational result is invalid the hardware implementation of
+the format should raise an interrupt.
 
 \section{Related work}\label{sec:relatedwork}
 
-\subsection{Rational number mathematics}\label{sec:rationalnumbers}
 
 One can calculate most of the fractions using rational representation
 
