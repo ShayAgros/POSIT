@@ -249,13 +249,55 @@ the format should raise an interrupt.
 
 \section{Related work}\label{sec:relatedwork}
 
+Several models were proposed in order to do fraction arithmetic more efficiently.
+This section describes some of these methods.
 
-One can calculate most of the fractions using rational representation
+\subsection{Representing fractions as two integers}\label{sec:repr-fract-as}
+
+The use of a format that specifies the \textit{exponent} part separately, e.g.
+IEEE 754(\Ref{sec:floatingpoints}) or POSIT(\Ref{sec:posit}), limits accurate
+representation to numbers which can be expressed using a base chosen during implementation.\\ For example,
+when using the IEEE 754 format with base 2, one cannot represent $\frac{1}{3}$
+exactly, as it cannot be represented as a sum of $2^{-i}$ (see
+\autoref{sec:posit} for more information).
+
+\paragraph{}
+One approach to represent rational numbers more accurately is to represent every
+number using its nominator and denominator values. For example to represent the
+number $\frac{1}{3}$ the process would hold the values 1 and 3.
+
+Multiplication and division would could be implemented using integer arithmetic
+which addition and subtraction would require first finding the LCM of the two
+denominators before adding/subtracting to nominators.
+
+Irrational numbers could be represented as an approximation using a rational
+number e.g. $\pi \approx \frac{22}{7}$.
+
+\paragraph{}
+This method already has some software implementations, for example
+\textit{Fraction} data type.
+
+\subsubsection{Caveats}\label{sec:caveats}
+
+Frequent fraction additions with the use of \textit{lcm} (different
+denominators), might result in a too large denominator and might require the use
+of the \textit{gcd} algorithm to reduce it.
+
+This would result in a very complex implementation with high latency per each
+arithmetic operation, and might not be suitable for many performance centered workflows.
 
 \subsection{Increasing Float size}\label{sec:increasefloat}
 
-Over the years, the number of bits in floating point operations has
-increased in order to imrpve number accuracy.
+Over the years, the number of bits in floating point operations has increased in
+order to improve number accuracy. This solution presents a somewhat ``quick fix''
+as it does not require to change the existing HW significantly.
+The current industry standard is using 64bit for the representation of
+fractions, but implementation of 32 and 128 bit also exist.
+
+\subsubsection{Caveats}\label{sec:caveats-1}
+
+Though simple, this solution does not solve the any of the problems listed in
+\autoref{sec:floatscaveats} and merely reduces the impact of some of them.
 
 
 \end{document}
