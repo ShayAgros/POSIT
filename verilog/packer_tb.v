@@ -5,6 +5,7 @@ module packer_tb;
 	reg signed [15:0] seed;
 	reg [2:0] exp;
 	reg [15:0] frac;
+	reg zero;
 
 	// OUTPUT
 	wire [15:0] posit;
@@ -13,7 +14,8 @@ module packer_tb;
 		.posit 	(posit),
 		.seed 	(seed),
 		.exp 	(exp),
-		.frac 	(frac)
+		.frac 	(frac),
+		.zero 	(zero)
 	);
 
 	/*
@@ -28,6 +30,7 @@ module packer_tb;
 		seed =   0;
 		exp  =   0;
 		frac =   0;
+		zero =   0;
 
 		// Basic sanity test
 
@@ -35,16 +38,19 @@ module packer_tb;
 		seed = 2;
 		exp  = 3'b011;
 		frac = 16'b1011010100000000;
+		zero =   0;
 		
 		#5 // Time = 10
 		seed = 0;
 		exp  = 3'b101;
 		frac = 16'b1011000101000000;
+		zero =   0;
 
 		#5 // Time = 15
 		seed = -2;
 		exp  = 3'b001;
 		frac = 16'b0111101010000000;
+		zero =   0;
 
 		// Seed takes all the data
 
@@ -52,11 +58,13 @@ module packer_tb;
 		seed = 14;
 		exp  = 3'b000;
 		frac = 16'b0000000000000000;
+		zero =   0;
 
 		#5 // Time = 25
 		seed = 0;
 		exp  = 3'b000;
 		frac = 16'b0000000000000000;
+		zero =   0;
 
 		//ES is not full
 
@@ -64,11 +72,13 @@ module packer_tb;
 		seed = 11;
 		exp  = 3'b110;
 		frac = 16'b0000000000000000;
+		zero =   0;
 
 		#5 // Time = 35
 		seed = -13;
 		exp  = 3'b100;
 		frac = 16'b0000000000000000;
+		zero =   0;
 
 		// ES is full, now we can have fraction
 
@@ -76,16 +86,25 @@ module packer_tb;
 		seed = 4;
 		exp  = 111;
 		frac = 16'b0000010000000000;
+		zero =   0;
 
 		#5 // Time = 45
 		seed = 1;
 		exp  = 111;
 		frac = 16'b1111001110000000;
+		zero =   0;
+
+		// if 'zero' bit is set the output POSIT would be all zeros
+		#5 // Time = 50
+		seed = 1;
+		exp  = 111;
+		frac = 16'b1111001110000000;
+		zero = 1;
 	end // tb
 
 	initial begin // monitor
-		$monitor("Time = %3d\n\tSeed = %3d   Exp = %3b   Frac = %16b  Posit = %16b\n",
-					$time, seed, exp, frac, posit);
+		$monitor("Time = %3d\n\tSeed = %3d   Exp = %3b   Frac = %16b  zero = %b  Posit = %16b\n",
+					$time, seed, exp, frac, zero, posit);
 	end // monitor
 
 endmodule // packer_tb

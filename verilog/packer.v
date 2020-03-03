@@ -3,6 +3,7 @@ module packer(
 	frac,
 	exp,
 	seed,
+	zero,
 	posit
 	);
 
@@ -14,6 +15,7 @@ module packer(
 	input logic [BITS-1:0] frac;
 	input logic [ES-1:0] exp;
 	input logic signed [BITS-1:0] seed;
+	input logic zero; // is the result zero
 
 	// OUTPUT
 	output wire [BITS-1:0] posit;
@@ -30,7 +32,6 @@ module packer(
 	logic [BITS-1:0] seed_sign_bit;
 	logic [BITS-1:0] temp_posit;
 	logic [BITS-1:0] shifter_bitmask;
-	logic [BITS-1:0] zero_vector; // represent the number 10000000 which is zero in POSIT
 
 	integer i;
 	integer xor_result;
@@ -107,11 +108,9 @@ module packer(
 		//$display("shifter_bitmask seed = %32b, reversed_exp_frac = %32b , input_exp_frac = %32b", shifter_bitmask, reverse_shifted_exp_frac, {reversed_frac[BITS-1-ES:0], reversed_exp} );
 	end // always (change seed sequence)
 
-	always @(temp_posit)
+	always @(temp_posit, zero)
 	begin
-		zero_vector = 0;
-		zero_vector[BITS-1] = 1;
-		if (temp_posit == zero_vector)
+		if (zero)
 			temp_posit = 0;
 	end
 
