@@ -4,6 +4,7 @@
 \usepackage{amsmath}  % math modes like 'align'
 \usepackage{fancyvrb} % pretty spaces in verbatim
 \usepackage{hyperref}
+\usepackage{algorithm2e}
 
 \title{POSIT, final report}
 \author{
@@ -298,6 +299,118 @@ fractions, but implementation of 32 and 128 bit also exist.
 
 Though simple, this solution does not solve the any of the problems listed in
 \autoref{sec:floatscaveats} and merely reduces the impact of some of them.
+
+\section{Environment and tools}\label{sec:environment-tools}
+
+\section{Implementation overview}\label{sec:impl-overv}
+
+Similar to Intel's ALU implementation, This project's implementation first
+divide the POSIT vector into three fields \textit{regime}, \textit{exponent} and
+\textit{fraction}, each of the same bit length as the original POSIT vector (as
+depicted in \autoref{fig:adder_block_diagram}). For example, a 32bit POSIT
+vector would be divided into three fields that are 32bit long each.
+
+These fields represent the value of the \textit{regime}, \textit{exponent} and
+\textit{fraction} parts of the vector \emph{after} after they've been converted
+into a 2's complement representation. \autoref{fig:adder_block_diagram}
+illustrates a block diagram of the POSIT adder implementation. As can be seen
+from the figure, the addition is done on each field separately and the results
+are combined (``packed'') together afterwards to form a valid POSIT vector (see
+``Packer'' module)
+
+\begin{figure}[h]
+  \centering
+  \includegraphics[width=\textwidth, height=0.4\paperheight]{adder_block_diagram}
+  \caption{Block diagram of the adder module}
+  \label{fig:adder_block_diagram}
+\end{figure}
+
+\subsection{Packer and unpacker modules}\label{sec:pack-unpack-modul}
+
+As explained, in this implementation, every arithmetic operation on a POSIT
+vector, is performed on each of its fields (\textit{regime}, \textit{exponent},
+\textit{fraction}) separately and the results of all operations are then
+combined into a new POSIT vector.
+
+\subsubsection{Unpacker}\label{sec:unpacker}
+
+The \textit{unpacker} module is responsible for converting a POSIT vector into
+three fields that represent its \textit{regime}, \textit{exponent},
+\textit{fraction} parts in 2's complement representation.
+
+the logic gate diagram (illustrated in \autoref{fig:unpacker_diagram})
+shows how the \textit{unpacker} module receives a POSIT vector of \textit{bits}
+length and returns its three components.
+
+\begin{figure}[h]
+  \centering
+  \includegraphics[width=\textwidth, height=0.2\paperheight]{unpacker_diagram}
+  \caption{Unpacker diagram}
+  \label{fig:unpacker_diagram}
+\end{figure}
+
+To better understand the implementation of the \textit{unpacker} module,
+\autoref{fig:seed_lookup_diagram} illustrates the \textit{seed\_lookup} module
+which takes a POSIT vector and by XORing all bits it find the first flipped bit
+of the \textit{regime}.
+Afterwards, the module uses the  \textit{regime} value to shift the POSIT vector left
+so the \textit{exponent} part begins in the MSB. It does so to make it easier
+for the \textit{unpacker} module to extract the other fields of the input vector.
+
+\begin{figure}[h]
+  \centering
+  \includegraphics[width=.8\textwidth,height=0.3\paperheight]{seed_lookup}
+  \caption{seed\_lookup logic gate diagram}
+  \label{fig:seed_lookup_diagram}
+\end{figure}
+
+The implementation avoids using any register dependant logic to reach low
+latency.
+
+\subsubsection{Packer}\label{sec:packer}
+
+The \textit{packer} does the exact opposite of \textit{unpacker} module. It
+receives \textit{regime}, \textit{exponent}, \textit{fraction} from the
+\textit{multiplier} or \textit{adder} and creates a POSIT vector from it.
+The \textit{packer} also receives an additional \textit{zero} flag which tells
+it if the result of the previous module is zero.
+
+The following pseudocode describes the verilog implementation of this module:\\
+
+\begin{algorithm}[H]
+ \KwData{seed, exponent, fraction and zero}
+ \KwResult{a POSIT vector }
+ \eIf{zero is set}{
+   return POSIT = zero vector
+ } {
+   set seed\_seq = sequence of running 1s or 0s depending on sign(seed) \\
+   set POSIT = seed\_seq concatenated with exponent and fraction parts \\
+   return the first \textit{n} bits of the POSIT vector, where \textit{n} is the
+   desired POSIT length
+ }
+\end{algorithm}
+
+The extra \textit{zero} input is needed because the numbers one and zero both
+have all three parts equal to 0 (i.e. $seed=0,\ exponent=0,\ fraction=0$).
+This issue is overview in \autoref{sec:pack-repr-1}.
+
+\subsection{Multiplication and Addition}\label{sec:mult-addit}
+
+\subsection{Division and subtraction}\label{sec:division-subtraction}
+
+
+\section{Issues encountered during the project}\label{sec:issu-enco-during}
+
+\subsection{Packer representation of 1}
+\label{sec:pack-repr-1}
+
+Found out that by removing the leading 1 in the fraction part the
+\textit{packer} module cannot tell zero and one apart.
+
+\subsection{Non-synthesizable code}
+\label{sec:non-synth-code}
+
+After sending our code for review we realized that our verilog code is not synthesizable
 
 
 \end{document}
