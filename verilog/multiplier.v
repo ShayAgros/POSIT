@@ -67,6 +67,7 @@ module multiplier (
 		.seed	(temp_seed[BITS-1:0]),
 		.exp	(temp_exp[ES-1:0]),
 		.frac	(temp_frac[2*BITS-2:BITS-1]),
+		.zero   (flag_zero),
 		.posit 	(temp_pos)
 	);
 
@@ -140,11 +141,9 @@ module multiplier (
 	always @* // AFTER PACKING
 		// Now we check zero/infinity flags
 	begin
-		if (flag_zero == 1 || flag_infinity == 1 || flag_overflow_seed == 1)
+		if (flag_infinity == 1 || flag_overflow_seed == 1)
 		begin
-			final_posit = 0;
-			if (flag_zero != 1)
-				final_posit[BITS-1] = 1;
+			final_posit = {1'b1, (BITS-1)'('b0)};
 		end // if
 		else
 			final_posit = (sign_bit) ? -temp_pos : temp_pos;
@@ -154,6 +153,5 @@ module multiplier (
 	end // always
 
 	assign posit = final_posit;
-
 
 endmodule // multiplier
