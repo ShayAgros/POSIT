@@ -61,13 +61,13 @@ module adder (
 
 	// FLAGS
 	logic flag_infinity;
-	logic flag_zero;	
+	logic flag_zero;
 	logic flag_zero_x;
 	logic flag_zero_y;
 	logic flag_overflow_frac;
 	logic flag_overflow_exp;
 	logic flag_overflow_seed;
-	
+
 	// Final packer vars
 	logic final_sign;
 	logic [BITS-1:0] temp_frac;
@@ -94,14 +94,14 @@ module adder (
 		.frac	(temp_frac),
 		.exp	(temp_exp),
 		.seed	(temp_seed),
-		.zero 	(flag_zero),
+		.zero	(flag_zero),
 		.posit	(temp_posit)
 	);
 
 	seed_lookup #(BITS + 5, ES) clz ( // Count leading zeros
-		.data 		 (temp_frac_normal),
+		.data		 (temp_frac_normal),
 		.shifted_data	 (    ), // Not actually needed
-		.seed 		 (leading_zero_count)
+		.seed		 (leading_zero_count)
 	);
 
 	always @* // BEFORE UNPACKING
@@ -110,7 +110,7 @@ module adder (
 		flag_zero_x = (x == 0);
 		flag_zero_y = (y == 0);
 		flag_infinity = 0;
-		
+
 		// If x or y are negative we need to convert them to 2's complement
 		positive_x = (x[BITS - 1]) ? -x : x;
 		positive_y = (y[BITS - 1]) ? -y : y;
@@ -137,7 +137,7 @@ module adder (
 
 		// Change the sign of the fractions if need be
 		// We add 2 MSB bits for the hidden bit and sign, and 3 LSB bits for rounding purposes
-		temp_frac_x = {2'b01, frac_x, 3'b0};		
+		temp_frac_x = {2'b01, frac_x, 3'b0};
 		temp_frac_y = {2'b01, frac_y, 3'b0};
 
 		// If different signs, adjust the fractions.
@@ -156,7 +156,7 @@ module adder (
 			end
 		end
 		else
-		begin 
+		begin
 			signed_temp_frac_x = temp_frac_x;
 			signed_temp_frac_y = temp_frac_y;
 		end // if
@@ -185,11 +185,11 @@ module adder (
 			final_sign = y[BITS-1];
 		end // if
 
-  		//$display("seed_x = %16b\t seed_y = %16b", seed_x, seed_y);
+		//$display("seed_x = %16b\t seed_y = %16b", seed_x, seed_y);
 		///$display("exp_x = %3b\t exp_y = %3b", exp_x, exp_y);
 		//$display("exp_sum_x = %16b\t exp_sum_y = %16b\t max_exp_sum = %16b",exp_sum_x, exp_sum_y, max_exp_sum);
-		//$display("temp_frac_x = %21b\t temp_frac_y = %21b", temp_frac_x, temp_frac_y);	
-		//$display("signed_temp_frac_x = %21b\t signed_temp_frac_y = %21b", signed_temp_frac_x, signed_temp_frac_y);	
+		//$display("temp_frac_x = %21b\t temp_frac_y = %21b", temp_frac_x, temp_frac_y);
+		//$display("signed_temp_frac_x = %21b\t signed_temp_frac_y = %21b", signed_temp_frac_x, signed_temp_frac_y);
 		//$display("big_fraction = %b\t small_fraction = %b", big_fraction, small_fraction);
 		//$display("shift_value = %b", shift_value);
 		frac_sum = big_fraction + (small_fraction >>> shift_value);
@@ -232,7 +232,7 @@ module adder (
 		end // if
 
 		abs_shift_sum = (shift_sum[BITS-1]) ? -shift_sum : shift_sum;
-		
+
 		//$display("leading_zero_count = %d", leading_zero_count);
 		//$display("shifted = %b", shifted);
 		//$display("shift_sum = %16b\t abs_shift_sum = %16b", shift_sum, abs_shift_sum);
@@ -253,11 +253,11 @@ module adder (
 		guard  = frac_normal[2];
 		round  = frac_normal[1];
 		sticky = frac_normal[0];
-		 // remove two upper bits we added before and the rounding bits after the LSB.
+		// remove two upper bits we added before and the rounding bits after the LSB.
 		temp_frac = frac_normal[BITS-1+5-2:3];
 		//$display("temp_seed = %16b\t temp_exp = %3b", temp_seed, temp_exp);
 		//$display("temp_frac = %16b", temp_frac);
-		
+
 	end // always
 
 	always @* // AFTER PACKING
