@@ -4,7 +4,8 @@
 \usepackage{amsmath}  % math modes like 'align'
 \usepackage{fancyvrb} % pretty spaces in verbatim
 \usepackage{hyperref}
-\usepackage{algorithm2e}
+\usepackage[linesnumbered]{algorithm2e}
+\usepackage{xcolor}
 
 \title{POSIT, final report}
 \author{
@@ -220,9 +221,11 @@ is:
 Combining the \textit{sign}, \textit{regime} and \textit{exponent} parts the
 decimal representation of a POSIT vector is
 
-\begin{align*}
-{(-1)}^{sign} \cdot ({useed}^{regime}) \cdot {2}^{exponent} \cdot 1.fraction
-\end{align*}
+\begin{align}
+  \label{eq:3}
+  {(-1)}^{sign} \cdot ({useed}^{regime}) \cdot {2}^{exponent} \cdot 1.fraction
+\end{align}
+
 
 \autoref{fig:diff_posit_vals} shows different POSIT vectors and their decimal
 value. As the figure shows, in case the fraction part is absent, it is assumed
@@ -231,7 +234,7 @@ to be zero (i.e. its decimal representation is $1 + 0 = 1$)
 \begin{figure}[h]
   \centering
   \includegraphics[height=0.25\paperheight]{posit_values}
-  \caption{5-bit POSIT vectors with es = 2, useed = $2^{2^{es}} = 16$ and their
+  \caption{5-bit POSIT vectors with \textcolor{blue}{es} = 2, \textcolor{brown}{useed} = $2^{2^{es}} = 16$ and their
     decimal value}
   \label{fig:diff_posit_vals}
 \end{figure}
@@ -396,8 +399,132 @@ This issue is overview in \autoref{sec:pack-repr-1}.
 
 \subsection{Multiplication and Addition}\label{sec:mult-addit}
 
+The \textit{multiplier} and \textit{adder} modules receive two POSIT vector and return
+their product and sum accordingly (as shown in \autoref{fig:adder_black_box} for
+the adder).
+Each of them use an the \textit{unpacker} and \textit{packer}
+modules internally to decompose each of the received vectors into their
+respective \textit{regime}, \textit{exponent} and \textit{fraction} fields.
+The addition/multiplication is done on each of the fields separately and the
+three results are combined into a single POSIT vector.
+
+\begin{figure}[h]
+  \centering
+  \includegraphics*[width=0.5\textwidth, height=0.2\paperheight]{adder_blackbox}
+  \caption{Adder blackbox scheme}
+  \label{fig:adder_black_box}
+\end{figure}
+
+\subsubsection{Adder}\label{sec:adder}
+
+As explained in \autoref{sec:mult-addit}, the addition starts by decomposing the
+input POSIT vectors into their three components.
+
+The \textit{adder} module can be expressed by the following pseudo-code: \\
+
+\begin{algorithm}[H]
+ \KwData{Two POSIT vectors $p_{1}, p_{2}$}
+ \KwResult{vectors sum in POSIT format $p_{r}$}
+ denote seed, exponent and fraction fields of the two vectors as
+ $s_{1}, e_{1}, f_{1}, s_{2}, e_{2}, f_{2}$ \\
+ Also denote the fields of the $p_{r}$ as $s_{r}, e_{r}, f_{r}$. \\
+
+ \eIf{$p_{1} = \pm\infty$ or $p_{2} = \pm \infty$}{
+   return $p_{r} = \pm \infty$
+ } {
+   $sum_{i}= s_{i} << ES + e_{i} \quad i=1,2$ \\
+   \eIf{$sum_{1} > sum_{2}$ or ($sum_{1} = sum_{2}$ and $f_{1} > f_{2})$}{
+     bigFrac = $f_{1}$;
+     bigExpSum = $sum_{1}$ \\
+     smallFrac = $f_{2}$;   
+     smallExpSum = $sum_{2}$
+   }{
+     bigFrac = $f_{2}$;
+     bigExpSum = $sum_{2}$ \\
+     smallFrac = $f_{1}$;
+     smallExpSum = $sum_{1}$
+   }
+   $resultExp = bigExpSum$ \\
+   $sumDiff = bigExpSum - smallExpSum$ \\
+   $resultFrac = bigFrac + (smallFrac >> sumDiff)$ \\
+   \eIf{$resultFrac$ overflows}{
+     resultExp = resultExp + 1
+   }{
+     resultExp -= number of time to shift $resultFrac$ left until its $MSB = 1$
+   }
+
+   $s_{r}$ = resultExp $<<$ \textit{es} \\
+   $e_{r}$ = first \textit{es} bits of resultExp \\
+   $f_{r}$ = resultFrac
+    }
+  \end{algorithm}
+
+  \vspace{0.3cm}
+\noindent To put the algorithm in words:
+\begin{enumerate}
+
+  \item If either of POSIT represents $\pm \infty$ (same representation, see
+  \autoref{sec:posit-speciel-values}), set the result to be $\pm \infty$ (lines 3-4)
+  \item the \textit{adder} normalizes the received vectors so that they both
+    have the same exponent (seed + exponent field). It uses the equation in line 6 that is equal to
+    $ s_{i} \cdot 2^{es} + e_{i}$ (which is equal to
+    the total exponent number of the POSIT). (lines 6-16)
+
+  \item adds the normalized fraction parts and adjusts the common exponent to
+  reflect an overflow in the result. (line 18)
+  \item adjust the common exponent so that the fraction sum would have MSB=1.
+  This is needed because the fraction part in POSIT is assumed to be between 1
+  and 2. Therefore the exponent need to be reduced to reflect the amount of left
+  shifting needed to have the MSB set. (line 20)
+  
+  \end{enumerate}
+
+  % TODO: add some words regarding
+
+\subsubsection{Multiplier}\label{sec:multiplier}
+
+As oppose to the \textit{adder} module, multiplication doesn't require
+normalizing the exponents before operation. The following pseudo-code describe
+its operation: \\
+\begin{algorithm}[H]
+ \KwData{Two POSIT vectors $p_{1}, p_{2}$}
+ \KwResult{vectors product in POSIT format $p_{r}$}
+ denote seed, exponent and fraction fields of the two vectors as
+ $s_{1}, e_{1}, f_{1}, s_{2}, e_{2}, f_{2}$ \\
+ Also denote the fields of the $p_{r}$ as $s_{r}, e_{r}, f_{r}$. \\
+
+ \eIf{$p_{1} = \pm\infty$ or $p_{2} = \pm \infty$}{
+   return $p_{r} = \pm \infty$
+ } {
+
+   $s_{r}$ = $s_{1} + s_{2}$ \\
+   $e_{r}$ = $e_{1} + e_{2}$ \\
+   $f_{r}$ = $f_{1} * f_{2}$ \\
+   \If{$f_{r}$ overflows}{$e_{r} = e_{r} + 1$}
+   \If{$e_{r}$ overflows}{$s_{r} = s_{r} + 1$}
+    }
+  \end{algorithm}
+
+\noindent note that is the \textit{seed} value overflows (meaning that the
+POSIT vector is a \textit{sign} bit followed by a sequence of the bit), then the
+output POSIT would be rounded to $\pm \infty$ or zero, depending on the sign of
+the seed.
+
 \subsection{Division and subtraction}\label{sec:division-subtraction}
 
+Subtraction can be implemented using the same logic as addition. Similarly,
+division can be regarded as a multiplication with the reciprocal of the dividing
+number:
+\begin{align*}
+  A/B = A\cdot \frac{1}{B}
+\end{align*}
+
+\noindent The POSIT format allows an easy transformation between a POSIT and its
+reciprocal value (as seen in \autoref{fig:diff_posit_vals}). The reciprocal is
+obtained by 2's complementing all exponent bits (\textit{regime} +
+\textit{exponent} field).
+As with IEEE 754 format, the reciprocal is only accurate up to the closest
+exponent of 2.
 
 \section{Issues encountered during the project}\label{sec:issu-enco-during}
 
