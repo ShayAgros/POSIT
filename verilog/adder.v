@@ -64,9 +64,6 @@ module adder (
 	logic flag_zero;
 	logic flag_zero_x;
 	logic flag_zero_y;
-	logic flag_overflow_frac;
-	logic flag_overflow_exp;
-	logic flag_overflow_seed;
 
 	// Final packer vars
 	logic final_sign;
@@ -269,7 +266,7 @@ module adder (
 			final_posit += 1;
 
 		//$display("final_posit = %16b", final_posit);
-		if (flag_infinity == 1 || flag_overflow_seed == 1)
+		if (flag_infinity == 1)
 			final_posit = {1'b1, (BITS-1)'('b0)};
 		if (flag_zero_x == 1)
 			final_posit = y;
