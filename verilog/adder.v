@@ -95,7 +95,7 @@ module adder (
 		.posit	(temp_posit)
 	);
 
-	seed_lookup #(BITS + 5, ES) clz ( // Count leading zeros
+	seed_lookup #(BITS + 5) clz ( // Count leading zeros
 		.data		 (temp_frac_normal),
 		.shifted_data	 (    ), // Not actually needed
 		.seed		 (leading_zero_count)

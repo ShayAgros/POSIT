@@ -28,6 +28,6 @@ module unpacker(
 
 	assign exp = $signed(shifted_data[BITS -1 : BITS - ES]);
 	assign frac[BITS-1 : ES] = $signed(shifted_data[BITS - ES - 1 : 0]);
-	assign frac[ES:0] = 0;
+	assign frac[ES-1:0] = 0;
 
 endmodule

@@ -1,7 +1,7 @@
 module left_shifter(
 	data,
 	bitmask,
-	shifted_data, 
+	shifted_data 
 	);
 
 	// PARAMETERS

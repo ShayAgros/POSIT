@@ -105,14 +105,11 @@ module packer(
 		else
 			temp_posit = temp_posit;
 
-		//$display("shifter_bitmask seed = %32b, reversed_exp_frac = %32b , input_exp_frac = %32b", shifter_bitmask, reverse_shifted_exp_frac, {reversed_frac[BITS-1-ES:0], reversed_exp} );
-	end // always (change seed sequence)
-
-	always @(temp_posit, zero)
-	begin
 		if (zero)
 			temp_posit = 0;
-	end
+
+		//$display("shifter_bitmask seed = %32b, reversed_exp_frac = %32b , input_exp_frac = %32b", shifter_bitmask, reverse_shifted_exp_frac, {reversed_frac[BITS-1-ES:0], reversed_exp} );
+	end // always (change seed sequence)
 
 	// add zero sign bit
 	assign posit = {1'b0, temp_posit[BITS-1:1]};

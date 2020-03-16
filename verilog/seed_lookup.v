@@ -1,7 +1,7 @@
 module seed_lookup(
 	data,
 	shifted_data,
-	seed,
+	seed
 	);
 
 	// PARAMETERS
