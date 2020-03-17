@@ -128,16 +128,13 @@ module adder_tb;
 		y = 16'b1011010000000000;	
 
 		#5 // Time = 105
-		// Lets normalize a really small number
-		// -2^-7 + 2^-8 = 2^-8
-		x = 16'b1011111111111000;
-		y = 16'b0100000000000100;
+		x = 16'b0111111001110110;
+		y = 16'b0111111001001101;
 
 		#5 // Time = 110
-		// Check that negative exp and seed work okay
-		// -2^-8 + 2^-9 = 2^-9
-		x = 16'b1011111111111100;
-		y = 16'b0100000000000010;
+		x = 16'b1100000000000000;
+		y = 16'b0100000000000100;
+
 	end
 
 	initial begin // monitor
