@@ -45,6 +45,12 @@ def create_frac_seq(frac):
 # exponent = sys.argv[2]
 # fraction = sys.argv[3]
 
+def twos_comp(val, bits):
+    """compute the 2's complement of int value val"""
+    val = (1 << bits) - val        # compute 2's complement
+    # val = val & ( (1 << bits) - 1 ) # mask value to be of length 'bits'
+    return val
+
 def create_vector(seed, exponent, fraction):
     # seed = 4
     # exponent = 2
@@ -67,7 +73,19 @@ def create_vector(seed, exponent, fraction):
     posit = "0" + seed_seq + exp_seq + fraction_seq
     posit = posit[0:16]
 
-    # if (fraction < 0):
-        # posit = "{0:16b}".format(~int(posit, 2))
+    if (fraction < 0):
+        posit = "{0:016b}".format(twos_comp(int(posit, 2), 16))
     return posit
-    # print(bin(int(posit)))
+
+seed    = -5
+exp     = 3
+frac    = -(1 + 1/4 + 1/16)
+
+posit = create_vector(seed, exp, frac)
+print(posit)
+# print("{0:016b}".format(twos_comp(int(posit, 2), 16)))
+
+# neg_posit = "{0:016b}".format(twos_comp(int(posit, 2), 16))
+# pos_posit = "{0:016b}".format(twos_comp(int(neg_posit, 2), 16))
+# print(neg_posit)
+# print(pos_posit[0:16])
