@@ -19,8 +19,8 @@ module multiplier (
 	logic [BITS-1:0] positive_x;
 	logic [BITS-1:0] positive_y;
 
-	wire [BITS-1:0] seed_x;
-	wire [BITS-1:0] seed_y;
+	wire signed [BITS-1:0] seed_x;
+	wire signed [BITS-1:0] seed_y;
 
 	wire [ES-1:0] exp_x;
 	wire [ES-1:0] exp_y;
@@ -134,7 +134,10 @@ module multiplier (
 
 		// CALCULATE THE SEED
 
-		temp_seed = seed_x + seed_y + flag_overflow_exp;
+		// These two lines are seperate because of signage. Go figure.
+		temp_seed = seed_x + seed_y;
+		temp_seed += flag_overflow_exp;
+
 		if (temp_seed > (BITS - 2))
 			flag_overflow_seed = 1;
 			
