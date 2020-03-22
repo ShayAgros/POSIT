@@ -25,6 +25,20 @@
 
 \pagebreak
 
+\section{Abstact}\label{sec:abstact}
+
+This project studies and implement the a floating point format called POSIT. It
+explains the differences between the POSIT and the current industry standard in
+terms of implementation complexity and computation accuracy.
+\autoref{sec:impl-overv} describes the implementation of different arithmetic
+units for the new format using SystemVerilog.
+
+\paragraph{}
+The project concludes that the new format is more suitable for
+workflows that need high accuracy and don't need to represent high range of
+numbers. Combined with the implementation simplicity, the new format can be a
+candidate to replace the current IEEE 754 standard.
+
 \section{Introduction}\label{sec:introduction}
 
 The project analyzes a new way to do fractions arithmetic, instead of
@@ -35,24 +49,45 @@ due to the growing popularity of machine learning and more complex graphic
 designs (e.g.\ video games). While some approaches propose different
 implementations of the current IEEE standard, other studies suggest a different
 way to represent fractions all together.
-This project studies one of these new formats called POSIT.
+This project studies one of these new formats called POSIT\cite{gustavson}.\@
 
 \subsection{Floating points}\label{sec:floatingpoints}
 
 The current industry standard for fraction representation is the IEEE standard
 754 (floats), in which a fraction is represented by three fields: sign, exponent
-and significant. If we denote the sign as s, the exponent as e and significant
-as f, then decimal representation of the number is:
+and significant (see \autoref{fig:ieee754}). By denoting the sign as s, the exponent as e and significant
+as f, the decimal representation of the number is represented by:
 
 
 \begin{align}
-  {(-1)}^{s} \cdot 2^{e} \cdot f\label{eq:1} 
+  {(-1)}^{s} \cdot 2^{e - bias} \cdot 1.f\label{eq:1}
 \end{align}
 
-The range and precision of the numbers that can be represented using this format
-depends on the number of bits used for the exponent and significant. The most
-ubiquitously used lengths are a 32 bit vector, with 24 bits for the significant
-part and a 64 bit vectors, with 53 bits for the significant part.
+\noindent The range and precision of numbers that can be represented using this format
+along with the value of \textit{bias} depend on the vector's length. The
+standard defines 3 types of vector lengths:
+
+\begin{table*}[h]\centering
+
+      \begin{tabular}{|l|l|l|l|l|}
+      \hline
+      & vector & exponent & fraction & bias \\
+      & length & bits & bits & \\
+      \hline
+      half & 16 & 5 & 10 & 15 \\
+      precision & & & & \\
+      \hline
+      single & 32 & 8 & 23 & 127 \\
+      precision & & & & \\
+      \hline
+      double & 64 & 11 & 52 & 1023 \\
+      precision & & & & \\
+      \hline
+    \end{tabular}
+
+\end{table*}
+
+\noindent{}The most used lengths nowadays are a 32 and 64 bit vectors.
 
 \begin{figure}[h]
   \centering
@@ -60,14 +95,65 @@ part and a 64 bit vectors, with 53 bits for the significant part.
   \caption{IEEE 754 standard fraction representation}\label{fig:ieee754}
 \end{figure}
 
-For example, the number 1.5 can be represented by setting $s=0, e=-2, f=6$ since
+\noindent{}For example, the number 1.5 can be represented by setting $s=0, e=bias, f=1.5$ since
 \begin{align*}
-  {(-1)}^{0} \cdot 2^{-2} \cdot 6 = \frac{6}{4} = 1.5
+  (1.5)_{10} = (1.1)_{2} = (-1)^{0} \cdot 2^{bias - bias} \cdot 1.5
 \end{align*}
+
+\noindent{}As seen in \autoref{eq:1}, the \textit{significant} only specifies the
+fractional part of the number ``$1.significant$''. In our example, this implies that
+the value \textit{f} would be represented by $0.1$ in the floating point vector.
+
+\subsubsection{Special values}\label{sec:special-values}
+
+The format reserves some special values with different meaning:
+\begin{itemize}
+  \item Zero - zero is a special value denoted with an exponent and fraction of
+  0. The format distinguishes between $+0$ and $-0$ using the \textit{sign} bit.
+  Although each has its own representation, both zeroes are equal.
+  \item Denormalised - If the \textit{exponent} is all zeroes, but the
+  \textit{fraction} is not, then the value is a denormalized number. This means
+  that this number does not have an assumed leading one before the binary point:
+  \begin{align*}
+    (-1)^{sign} \cdot e^{-bias} \cdot 0.fraction
+  \end{align*}
+  \item Infinity - The value $\pm \infty$ are denoted with an \textit{exponent} of all
+  ones and a \textit{fraction} of all zeroes. The sign bit distinguishes between
+  negative and positive infinity. Every multiplication and addition with the
+  infinity value would result in infinity except multiplication by 0 which would
+  result in NAN.
+  \item Not A Number (NAN) - The value NAN is used to represent a value that is
+  an error. This is represented when \textit{exponent} field is all ones with a
+  zero sign bit and \textit{fraction} field that is not zero.
+
+\end{itemize}
+
+\autoref{tab:ieee754_special_vals} summarizes the representation of the IEEE 754
+special values.
+
+\begin{table}[h]\centering
+  
+  \begin{tabular}{|l|l|l|}
+    \hline
+    Exponent & Fraction & value \\
+    \hline
+    0 & 0 & 0 \\
+    \hline
+    all set & 0 & $\pm \infty$ \\
+    \hline
+    0 & not 0 & denormalized \\
+    \hline
+    all set & not 0 & Not A Number (NAN) \\
+    \hline
+  \end{tabular}
+  
+  \caption{Summary of IEEE 754 special values}
+  \label{tab:ieee754_special_vals}
+\end{table}
 
 \subsection{Caveats}\label{sec:floatscaveats}
 
-Although ubiquitous, the IEEE standard 754 has some several downsides. Since the
+Although ubiquitous, the IEEE standard 754 has several downsides. Since the
 exponent and fraction bit lengths are fixed, the range and accuracy of a number
 that can be represented using this format are limited, which in turn case some
 problems.
@@ -81,10 +167,10 @@ base, some number would always be impossible to represent exactly.
 For example, by choosing base 2, the number $0.3$ cannot be represented
 precisely and is rounded to a value that can be represented by
 \begin{align*}
-  {2}^{e}\cdot f
+  {2}^{e - bias}\cdot 1.f
 \end{align*}
 
-Since $0.3$ representation is only and approximation of the real number, the
+\noindent{}Since $0.3$ representation is only and approximation of the real number, the
 following Python code
 \begin{verbatim}
 > 0.3 + 0.3 + 0.3 == 0.9
@@ -95,16 +181,19 @@ is mistakenly evaluated to ``False''.
 
 The range and precision of an IEEE 754 number depend on the number of bits
 allocated to it during implementation.
-Allocating more bits to the exponent part can increase the precision of a
-number, while increasing the significant field can increase its range.
+Allocating more bits to the exponent part can the range of numbers, while
+increasing the \textit{fraction} field can increase their accuracy.
+For example, to represent the number $\frac{1}{3}$ we need infinite bits for the
+fraction part.
 
-As the number of bits is finite, one might choose a floating point
-implementation where the precision and range match some of one's workflows but
-not others. \ref{prec_value} shows the precision in two common implementations:
-\begin{itemize}
-  \item single precision-32 bit vector with 24 bits for the significant part
-  \item double precision-64 bit vector with 53 bits for the significant part
-\end{itemize}
+Moreover, as the \textit{exponent} value increases, the precision granularity
+gets worse (as seen in \autoref{prec_value}) since each change in the
+\textit{fraction} part is multiplied by the \textit{exponent} value (see
+\autoref{eq:1} for reference).
+
+This creates a situation where precision-sensitive workflows need to settle on
+the given \textit{fraction} bits, even when the big range is not required (since
+the fraction part cannot use the exponent bits to increase precision).
 
 \begin{figure}[h]
   \centering
@@ -115,23 +204,16 @@ not others. \ref{prec_value} shows the precision in two common implementations:
 \subsubsection{Wasteful representation}\label{sec:wast-repr}
 
 There are more than one way to represent the same number using the existing
-format. For example, the number 16 can be represented by
-\begin{itemize}
-  \item setting exponent part to zero and significant to 16 so that the number
-    is ${2}^{0}\cdot 16$. Or
-  \item setting the exponent part to 4 and significant to 1 so that the number
-  is ${2}^{4} \cdot 1$
-\end{itemize}
-
-Moreover, in order to represent ``Not a number'' (NaN), an indication that the
-result is invalid, the IEEE 754 format instruct to set all the exponent bits to
-1. This results in a wasteful use of the significant bit, as any value of them,
-combined with trailing ones in the exponent part would represent the same NaN.
+format. As explained in \autoref{sec:special-values} the NAN number are
+represented by setting the \textit{exponent} bits to zero and \textit{fraction}
+bits to not zero. In single precision format, this leads to
+$2\cdot (2^{23} - 1)$ different representation of NANs. \\
+Since all NAN are the same, this representation is quite wasteful.
 
 \section{POSIT}\label{sec:posit}
 
 In order to tackle some of the IEEE 754 format's problems, a new format was
-proposed by John Gustavson which is called POSIT.
+proposed by John Gustavson which is called POSIT\cite{gustavson}.\@
 
 The new format divides the bit vector into four parts (\Ref{fig:posit_format}):
 \textit{sign, regime, exponent} and \textit{fraction}, which together form the
@@ -140,7 +222,7 @@ decimal number:
 {(-1)}^{sign} \cdot ({useed}^{regime}) \cdot {2}^{exponent} \cdot 1.fraction \label{eq:2}
 \end{align}
 
-where $useed = 2^{2^{es}}$ and \textit{es} is the number of bits used for the exponent part.
+\noindent{}where $useed = 2^{2^{es}}$ and \textit{es} is the number of bits used for the exponent part.
 
 \begin{figure}[h]
   \centering
@@ -156,14 +238,13 @@ following manner:
   bbbbbbb\overline{b}
 \end{align*}
 
-in this sequence of n \textit{b}'s and one \textit{$\overline{b}$}
+\noindent{}in this sequence of n \textit{b}'s and one \textit{$\overline{b}$}
 \begin{itemize}
   \item if b=0, the regime equals to -n
   \item if b=1, the regime equals to n-1
 \end{itemize}
-
 Figure \Ref{fig:regime_values} shows more examples of \textit{regime} sequences and their
-value in the \Ref{eq:2} equation:
+value in the \autoref{eq:2}:
 
 \begin{figure}[h]
   \centering
@@ -174,7 +255,7 @@ value in the \Ref{eq:2} equation:
 
 \subsection{Dynamic range and accuracy}\label{sec:dynam-range-accur}
 
-As explain the \textit{regime} description \Ref{sec:regime-value}, the regime
+As explain the \textit{regime} description in \autoref{sec:regime-value}, the \textit{regime}
 field does not have a fixed size: The number of bits in the regime part are
 determined by the first flipped bit after the bit sequence. \\\\
 This implies that both \textit{01} and \textit{111111111111110} are valid regime sequences
@@ -202,6 +283,9 @@ implementation. The field's starts after the first flipped bit that marks the
 than \textit{es} bits left after the \textit{regime} field, the
 \textit{exponent} field is right-padded with zeroes.
 
+Unlike the IEEE 754 standard, in POSIT the \textit{exponent} field represent a
+positive number without \textit{bias}. This implies that the \textit{exponent}
+range is $0 \leq exponent \leq 2^{es} - 1$
 
 \subsubsection{fraction field}\label{sec:fraction-field}
 The \textit{fraction} part of the POSIT starts after the \textit{exponent} field
@@ -210,7 +294,7 @@ occupied by the \textit{sign}, \textit{regime} and \textit{exponent}
 parts(\Ref{sec:regime-value}).
 
 \paragraph{}
-Unlike the IEEE 754 format, the POSIT format assumes that \textit{fraction} field only
+Like the IEEE 754 format, the POSIT format assumes that the \textit{fraction} field only
 describes the fractional part of a number $1\leq n < 2 $. For example, the
 decimal representation of the \textit{fraction} field $b_{1},b_{2},\dots,b_{n}$
 is:
@@ -239,13 +323,48 @@ to be zero (i.e. its decimal representation is $1 + 0 = 1$)
   \label{fig:diff_posit_vals}
 \end{figure}
 
-\subsection{POSIT speciel values}\label{sec:posit-speciel-values}
+\subsection{POSIT special values}\label{sec:posit-special-values}
 
-POSIT format does not differentiate between $\pm\infty$ and represents them both
-by setting the \textit{sign} bit and clearing the rest of the vector (as can be
-seen in \autoref{fig:diff_posit_vals}). \\
-Zero representation is a vector with all its bits cleared.
+Similar to IEEE 754 the POSIT format defines special values:
+\begin{itemize}
+  \item infinity -POSIT format does not differentiate between $\pm\infty$ and
+    represents them both by setting the \textit{sign} bit and clearing the rest
+    of the vector (as can be seen in \autoref{fig:diff_posit_vals}).
+  \item zero - a vector with all its bits cleared represents the zero value.
+    POSIT has only representation for it.
+  \item regime only number - if the \textit{regime} part consists of striding 1's and has
+    no flipped bit, then the vector is assumed to have \textit{exponent} and
+    \textit{fraction} part equal to 0, and the \textit{regime} field is assumed
+    to have flipped bit at its end. For example, for a 16 bit POSIT vector, this
+    value would be represented as:
+    \begin{align*}
+      s111111111111111
+    \end{align*}
+    Where $s$ is the sign bit. In this example the number is equal to
+    \begin{align*}
+      (-1)^{s}\cdot (useed)^{14}
+    \end{align*}
+  \end{itemize}
 
+  \autoref{tab:special_posit_value} summarizes the special POSIT values
+  \begin{table}[h]\centering
+    \begin{tabular}{|l|l|l|}
+      \hline
+      sign & the other & bits value \\
+      \hline
+      0 & all cleared 0 & \\
+      \hline
+      1 & all cleared & $\pm \infty $ \\
+      \hline
+      0 & all set & $(useed)^{n- 1} $ \\
+      \hline
+      1 & all set & $-(useed)^{n-1} $ \\
+      \hline
+    \end{tabular}
+
+    \caption{Special POSIT values}
+    \label{tab:special_posit_value}
+  \end{table}
 \paragraph{}
 Unlike the IEEE 754 format, POSIT doesn't have a representation of NaN. In order
 to signal that a computational result is invalid the hardware implementation of
@@ -256,23 +375,23 @@ the format should raise an interrupt.
 Several models were proposed in order to do fraction arithmetic more efficiently.
 This section describes some of these methods.
 
-\subsection{Representing fractions as two integers}\label{sec:repr-fract-as}
+\subsection{Representing fractions by numerator and denominator}\label{sec:repr-fract-as}
 
 The use of a format that specifies the \textit{exponent} part separately, e.g.
-IEEE 754(\Ref{sec:floatingpoints}) or POSIT(\Ref{sec:posit}), limits accurate
-representation to numbers which can be expressed using a base chosen during implementation.\\ For example,
+IEEE 754(\Ref{sec:floatingpoints}) or POSIT(\Ref{sec:posit}), limits
+representation of numbers which that cannot be expressed using a chosen.\\ For example,
 when using the IEEE 754 format with base 2, one cannot represent $\frac{1}{3}$
-exactly, as it cannot be represented as a sum of $2^{-i}$ (see
+exactly,  since $\frac{1}{3}$ cannot be represented as a sum of $2^{-i}$ (see
 \autoref{sec:posit} for more information).
 
 \paragraph{}
 One approach to represent rational numbers more accurately is to represent every
 number using its nominator and denominator values. For example to represent the
-number $\frac{1}{3}$ the process would hold the values 1 and 3.
+number $\frac{1}{3}$ the implementation would hold the values 1 and 3.
 
-Multiplication and division would could be implemented using integer arithmetic
-which addition and subtraction would require first finding the LCM of the two
-denominators before adding/subtracting to nominators.
+Multiplication and division could be implemented using integer arithmetic.
+Addition and subtraction would require first finding the LCM of the two
+denominators before adding/subtracting the nominators.
 
 Irrational numbers could be represented as an approximation using a rational
 number e.g. $\pi \approx \frac{22}{7}$.
@@ -292,34 +411,48 @@ arithmetic operation, and might not be suitable for many performance centered wo
 
 \subsection{Increasing Float size}\label{sec:increasefloat}
 
-Over the years, the number of bits in floating point operations has increased in
-order to improve number accuracy. This solution presents a somewhat ``quick fix''
-as it does not require to change the existing HW significantly.
-The current industry standard is using 64bit for the representation of
-fractions, but implementation of 32 and 128 bit also exist.
+As described in \autoref{sec:gran-range-probl}, the bits in the
+\textit{fraction} field results in higher accuracy. Workflows which require high
+accuracy can use a modified version of the IEEE 754 format with more bits for
+the \textit{fraction} parts. This solution presents a somewhat ``quick fix'' as
+it does not require to change the existing HW significantly.
 
 \subsubsection{Caveats}\label{sec:caveats-1}
 
 Though simple, this solution does not solve the any of the problems listed in
 \autoref{sec:floatscaveats} and merely reduces the impact of some of them.
+Also, increasing the total bits per float would result in increase in either
+latency or power consumption.
 
 \section{Environment and tools}\label{sec:environment-tools}
+
+\begin{itemize}
+  \item Icarus iverilog and vvp - Most of the development for this project was
+  done on Linux private computers. The free \textit{iverilog} allows for a
+  command line compilation of System Verilog code. The \textit{vvp} is used for
+  running the compiled file.
+  \item Inkscape - this tool is used to creating vector design (similar to Adobe
+  illustrator, but free). It was used to designing the logic diagrams for
+  various components.
+  \item Synopsis tools for synthesis and elaboration - these tools were used to
+  verify that the code is indeed synthesizable.
+\end{itemize}
 
 \section{Implementation overview}\label{sec:impl-overv}
 
 Similar to Intel's ALU implementation, This project's implementation first
-divide the POSIT vector into three fields \textit{regime}, \textit{exponent} and
+divides the POSIT vector into three fields \textit{regime}, \textit{exponent} and
 \textit{fraction}, each of the same bit length as the original POSIT vector (as
 depicted in \autoref{fig:adder_block_diagram}). For example, a 32bit POSIT
 vector would be divided into three fields that are 32bit long each.
 
 These fields represent the value of the \textit{regime}, \textit{exponent} and
-\textit{fraction} parts of the vector \emph{after} after they've been converted
+\textit{fraction} parts of the vector \emph{after} they've been converted
 into a 2's complement representation. \autoref{fig:adder_block_diagram}
 illustrates a block diagram of the POSIT adder implementation. As can be seen
 from the figure, the addition is done on each field separately and the results
 are combined (``packed'') together afterwards to form a valid POSIT vector (see
-``Packer'' module)
+``Packer'' subsubsection\Ref{sec:packer})
 
 \begin{figure}[h]
   \centering
@@ -341,7 +474,7 @@ The \textit{unpacker} module is responsible for converting a POSIT vector into
 three fields that represent its \textit{regime}, \textit{exponent},
 \textit{fraction} parts in 2's complement representation.
 
-the logic gate diagram (illustrated in \autoref{fig:unpacker_diagram})
+The logic gate diagram (illustrated in \autoref{fig:unpacker_diagram})
 shows how the \textit{unpacker} module receives a POSIT vector of \textit{bits}
 length and returns its three components.
 
@@ -354,10 +487,10 @@ length and returns its three components.
 
 To better understand the implementation of the \textit{unpacker} module,
 \autoref{fig:seed_lookup_diagram} illustrates the \textit{seed\_lookup} module
-which takes a POSIT vector and by XORing all bits it find the first flipped bit
+which takes a POSIT vector and by XORing all bits finds the first flipped bit
 of the \textit{regime}.
 Afterwards, the module uses the  \textit{regime} value to shift the POSIT vector left
-so the \textit{exponent} part begins in the MSB. It does so to make it easier
+so the \textit{exponent} part starts in the MSB. It does so to make it easier
 for the \textit{unpacker} module to extract the other fields of the input vector.
 
 \begin{figure}[h]
@@ -367,7 +500,7 @@ for the \textit{unpacker} module to extract the other fields of the input vector
   \label{fig:seed_lookup_diagram}
 \end{figure}
 
-The implementation avoids using any register dependant logic to reach low
+The implementation avoids using any register dependant logic to achieve low
 latency.
 
 \subsubsection{Packer}\label{sec:packer}
@@ -395,14 +528,14 @@ The following pseudocode describes the verilog implementation of this module:\\
 
 The extra \textit{zero} input is needed because the numbers one and zero both
 have all three parts equal to 0 (i.e. $seed=0,\ exponent=0,\ fraction=0$).
-This issue is overview in \autoref{sec:pack-repr-1}.
+This issue is discussed in \autoref{sec:pack-repr-1}.
 
 \subsection{Multiplication and Addition}\label{sec:mult-addit}
 
 The \textit{multiplier} and \textit{adder} modules receive two POSIT vector and return
 their product and sum accordingly (as shown in \autoref{fig:adder_black_box} for
 the adder).
-Each of them use an the \textit{unpacker} and \textit{packer}
+Each of them uses the \textit{unpacker} and \textit{packer}
 modules internally to decompose each of the received vectors into their
 respective \textit{regime}, \textit{exponent} and \textit{fraction} fields.
 The addition/multiplication is done on each of the fields separately and the
@@ -448,7 +581,8 @@ The \textit{adder} module can be expressed by the following pseudo-code: \\
    $sumDiff = bigExpSum - smallExpSum$ \\
    $resultFrac = bigFrac + (smallFrac >> sumDiff)$ \\
    \eIf{$resultFrac$ overflows}{
-     resultExp = resultExp + 1
+     resultExp = resultExp + 1 \\
+     resultFrac = resultFrac / 2
    }{
      resultExp -= number of time to shift $resultFrac$ left until its $MSB = 1$
    }
@@ -463,19 +597,19 @@ The \textit{adder} module can be expressed by the following pseudo-code: \\
 \noindent To put the algorithm in words:
 \begin{enumerate}
 
-  \item If either of POSIT represents $\pm \infty$ (same representation, see
-  \autoref{sec:posit-speciel-values}), set the result to be $\pm \infty$ (lines 3-4)
+  \item if either of the POSITs represent $\pm \infty$ (same representation, see
+  \autoref{sec:posit-special-values}), set the result to be $\pm \infty$ (lines 3-4)
   \item the \textit{adder} normalizes the received vectors so that they both
-    have the same exponent (seed + exponent field). It uses the equation in line 6 that is equal to
+    have the same exponent (seed + exponent field). The equation in line 6  equals to
     $ s_{i} \cdot 2^{es} + e_{i}$ (which is equal to
-    the total exponent number of the POSIT). (lines 6-16)
+    the total exponent of the POSIT). (lines 6-16)
 
-  \item adds the normalized fraction parts and adjusts the common exponent to
-  reflect an overflow in the result. (line 18)
-  \item adjust the common exponent so that the fraction sum would have MSB=1.
-  This is needed because the fraction part in POSIT is assumed to be between 1
-  and 2. Therefore the exponent need to be reduced to reflect the amount of left
-  shifting needed to have the MSB set. (line 20)
+  \item add the normalized fraction parts and adjust the common exponent to
+  reflect an overflow in the result. (lines 18-19)
+  \item adjust the common exponent so that the fraction sum would be between 1
+    and 2. This is needed because the fraction part in POSIT is assumed to be in
+    that range. Therefore the exponent needs to be adjusted to scale the
+    fraction part as needed. (line 21)
   
   \end{enumerate}
 
@@ -522,7 +656,9 @@ number:
 \noindent The POSIT format allows an easy transformation between a POSIT and its
 reciprocal value (as seen in \autoref{fig:diff_posit_vals}). The reciprocal is
 obtained by 2's complementing all exponent bits (\textit{regime} +
-\textit{exponent} field).
+\textit{exponent} field). To reciprocate the \textit{fraction} a different logic
+should be implemented, such as translation tables (POSIT doesn't offer a fast
+method to reciprocate this field).
 As with IEEE 754 format, the reciprocal is only accurate up to the closest
 exponent of 2.
 
@@ -539,6 +675,14 @@ Found out that by removing the leading 1 in the fraction part the
 
 After sending our code for review we realized that our verilog code is not synthesizable
 
+
+\begin{thebibliography}{99}
+  \bibitem{gustavson}
+  Gustavson, Yonemato
+  \textit{Beating Floating Point at its Own Game: Posit Arithmetic}
+  \url{http://www.johngustafson.net/pdfs/BeatingFloatingPoint.pdf}
+
+\end{thebibliography}
 
 \end{document}
 
