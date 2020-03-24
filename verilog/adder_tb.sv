@@ -16,6 +16,9 @@ module adder_tb;
 
 	initial begin //tb
 
+		$dumpfile("adder_waveform.vcd");
+		$dumpvars(0, dut);
+
 		// MOST TEST WILL BE SIMMETRYCAL TO SHOW COMMUTATIVITY
 
 		// Infinity
@@ -134,6 +137,10 @@ module adder_tb;
 		#5 // Time = 110
 		x = 16'b1100000000000000;
 		y = 16'b0100000000000100;
+		
+		#5 // Time = 115
+		x = 16'b0111111001100000;
+		y = 16'b0111111001000000;
 
 	end
 

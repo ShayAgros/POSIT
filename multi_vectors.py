@@ -1,4 +1,4 @@
-#!/usr/bin/env python
+#!/usr/bin/env python3
 
 from create_posit import create_vector
 
@@ -13,7 +13,7 @@ def multiply_numbers(seed1, exp1, frac1, seed2, exp2, frac2):
         exp = exp +1
         frac = frac / 2
 
-    if (exp > 2 ** ES):
+    if (exp >= 2 ** ES):
         seed = seed + 1
         exp = exp - 2 ** ES
 
