@@ -3,7 +3,7 @@
 \usepackage{graphicx} % display pictures
 \usepackage{amsmath}  % math modes like 'align'
 \usepackage{fancyvrb} % pretty spaces in verbatim
-\usepackage{hyperref}
+\usepackage[colorlinks=true,linkcolor=black]{hyperref}
 \usepackage[linesnumbered]{algorithm2e}
 \usepackage{xcolor}
 
@@ -15,11 +15,17 @@
   Shahaf Haller \\
   \texttt{hallershahaf@campus.technion.ac.il}
 }
-
+\date{}
 
 \begin{document}
 
 \maketitle
+\vspace{3cm}
+\begin{figure*}[h]\centering
+  
+  \includegraphics[height=0.3\paperheight]{type2_circle}
+\end{figure*}
+\pagebreak
 
 \tableofcontents
 
@@ -667,14 +673,108 @@ exponent of 2.
 \subsection{Packer representation of 1}
 \label{sec:pack-repr-1}
 
-Found out that by removing the leading 1 in the fraction part the
-\textit{packer} module cannot tell zero and one apart.
+The packer receives the value of its fields as three signed vectors which are
+identical to the unpacker's output (see \autoref{sec:unpacker}).
+This creates a problem in distinguishing between the POSIT representation of 1,
+$01000\dots$, and 0, which is $0000\dots$, as both numbers satisfy
+$seed = exponent = fraction = 0$.
+
+The identical representation is the result of the hidden bit in the fraction
+part (since $fraction = 0$ actually represents the number $1.00\dots$). We
+solved this problem by passing a flag as the \textit{fourth} input to the
+packer which signal whether the POSIT vector represents a 0 or not. This way the
+we get
+\begin{itemize}
+  \item packer(seed = 0, exponent = 0, fraction = 0, zero\_flag=0) =
+    00000$\dots$
+  \item packer(seed = 0, exponent = 0, fraction = 0, zero\_flag=1) =
+    01000$\dots$
+\end{itemize}
 
 \subsection{Non-synthesizable code}
 \label{sec:non-synth-code}
 
-After sending our code for review we realized that our verilog code is not synthesizable
+As was explained in \autoref{sec:environment-tools}, most of the time the
+project was compiled using iVerilog tool to check for correctness. This tools,
+which compiles SystemVerilog, doesn't give any indication to whether the code is
+synthesizable or not.
 
+After presenting the mid-semester presentation, the lab engineer offered to review
+our code. He Pointed out that some instructions in the code
+cannot be synthesized using real hardware. This led to a redesign or some of our
+modules. To make sure that the new code can be created using HW, for some of our
+modules we drew logic gate diagrams.
+
+\section{Implementation Verification}\label{sec:impl-verif}
+
+\subsection{Arithmetic correctness}\label{sec:arithm-corr}
+
+For each of the modules a test bench was written in SystemVerilog to test its
+correctness and output for special values.
+To test the mathematical correctness of the modules, each of the modules was
+implemented in Python as well and the output of the two version (SUV and Python)
+was compared.
+
+\subsection{Waveform presentation}\label{sec:waveform-testing}
+
+To check how the different signals in the modules react over time a waveform
+diagram was produced for every module (see \autoref{fig:waveform_mult} for an
+example the multiplier module). They were especially useful in problems
+caused by signals that change undesirably and triggering code to run.
+
+\begin{figure}[]
+  \centering
+  \includegraphics[width=\linewidth]{multiplier_waveform}
+  \caption{Waveform representation of multiplier module}
+  \label{fig:waveform_mult}
+\end{figure}
+
+\section{Conclusion}\label{sec:conclusion}
+
+The tests show that when doing small number (between $-8$ and $8$ in our tests)
+arithmetic using POSIT format, most of the bits are reserved for the
+\textit{fraction} part, 26 bits out of a 32bit, while still leaving enough
+\textit{exponent} bits to handle overflows.
+
+Since more \textit{fraction} bits give higher accuracy, this result proves the
+accuracy superiority of POSITs in comparison to the IEEE 754 format (as claimed
+by \textit{gustavson} et al.\cite{gustavson}).
+
+\paragraph{}
+The added accuracy makes the POSIT more suitable for some workflows which work
+with small numbers, e.g.\ probability calculations, than the IEEE 754 format.
+POSIT also allows general purpose calculations thanks to its dynamic field
+widths. Since the implementation complexity of POSIT computational unit is the
+same of the IEEE 754 for most operations, this makes it a viable alternatives
+for some machines.
+
+\paragraph{}
+Nevertheless, the format shows some disadvantages compared to the current
+industry standard. As mentioned in \autoref{sec:division-subtraction},
+reciprocating the \textit{fraction} part of a POSIT is a non-trivial task, and
+might be implemented using translation tables. Regardless of the chosen method,
+the varying size if the \textit{fraction} field, might make the reciprocating
+unit much more complex (and possibly less efficient) than its IEEE 754
+counterpart.
+
+\paragraph{}
+Another issue, caused by the dynamic filed sizes, is the accuracy loss in high
+numbers. Since high numbers in POSIT representation have a small (or
+non-existent) \textit{fraction} field, arithmetic using such numbers wouldn't
+have a good accuracy. This means that it POSIT format the following expression
+can be true:
+\begin{align*}
+  2^{31} + 2^{-31} = 2^{31}
+\end{align*}
+This might not be a very big issue, as this equation can be done with a 32bit
+vector only in POSIT format (its IEEE 754 counterpart only has 23 bits for the
+\textit{exponent} field).
+
+\paragraph{}
+The new format should be checked with more workflows to verify that the claim
+made by \textit{gustavson} at al.\cite{gustavson}, regarding that arithmetic in
+programs is mostly done with number of the same range is true. If so, many
+workflows can gain by switching to the POSIT format in terms of accuracy and range.
 
 \begin{thebibliography}{99}
   \bibitem{gustavson}
